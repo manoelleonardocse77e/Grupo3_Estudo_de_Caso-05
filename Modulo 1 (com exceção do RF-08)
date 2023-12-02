@@ -1,0 +1,254 @@
+import csv
+from datetime import datetime
+
+class SistemaTreino:
+    def __init__(self):
+        self.alunos = []
+        self.avaliacoes = []
+        self.mensagens = []
+        self.carregar_dados_iniciais()
+
+    def carregar_dados_csv(self):
+        try:
+            with open('alunos.csv', mode='r') as file:
+                reader = csv.DictReader(file)
+                self.alunos = list(reader)
+
+            with open('avaliacoes.csv', mode='r') as file:
+                reader = csv.DictReader(file)
+                self.avaliacoes = list(reader)
+
+            with open('mensagens.csv', mode='r') as file:
+                reader = csv.DictReader(file)
+                self.mensagens = list(reader)
+
+        except FileNotFoundError:
+            print("Arquivos de dados não encontrados. Iniciando com listas vazias.")
+
+    def salvar_dados_csv(self):
+        with open('alunos.csv', mode='w', newline='') as file:
+            fieldnames = ['nome', 'idade', 'peso', 'altura', 'condicao_medica']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+
+            # Remover o campo 'mensagens' antes de salvar os dados
+            for aluno in self.alunos:
+                aluno_data = {key: aluno[key] for key in fieldnames if key in aluno}
+                writer.writerow(aluno_data)
+
+        with open('avaliacoes.csv', mode='w', newline='') as file:
+            fieldnames = ['aluno', 'tipo_avaliacao', 'data', 'resultado', 'avaliador']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.avaliacoes)
+
+        with open('mensagens.csv', mode='w', newline='') as file:
+            fieldnames = ['remetente', 'destinatario', 'mensagem', 'data_envio']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(self.mensagens)
+
+    def carregar_dados_iniciais(self):
+        self.carregar_dados_csv()
+
+    def cadastrar_aluno(self, nome, idade, peso, altura, condicao_medica, meta):
+        if len(self.alunos) < 200:
+            aluno = {
+                'nome': nome,
+                'idade': idade,
+                'peso': peso,
+                'altura': altura,
+                'condicao_medica': condicao_medica,
+                'metas': {meta: None},
+                'historico_avaliacoes': [],
+                'mensagens': []
+            }
+            self.alunos.append(aluno)
+            return aluno
+        else:
+            print("Limite máximo de alunos atingido.")
+            return None
+
+    def marcar_avaliacao(self, aluno):
+        if 'historico_avaliacoes' not in aluno:
+            aluno['historico_avaliacoes'] = []
+
+        print("==== Marcar Avaliação ====")
+        avaliador = input("Nome do Avaliador: ")
+        tipo_avaliacao = input("Tipo de Avaliação: ")
+        data_avaliacao = input("Data da Avaliação (formato AAAA-MM-DD): ")
+
+        avaliacao = {
+            'tipo_avaliacao': tipo_avaliacao,
+            'data': data_avaliacao,
+            'resultado': None
+        }
+
+        aluno['historico_avaliacoes'].append(avaliacao)
+        print(f"Avaliação marcada com sucesso por {avaliador} em {data_avaliacao}")
+
+    def realizar_avaliacao(self, aluno, tipo_avaliacao, data, resultado, avaliador):
+        if 'metas' not in aluno:
+            aluno['metas'] = {}
+        if 'historico_avaliacoes' not in aluno:
+            aluno['historico_avaliacoes'] = []
+
+        aluno['metas'][tipo_avaliacao] = resultado
+
+        avaliacao = {
+            'tipo_avaliacao': tipo_avaliacao,
+            'data': data,
+            'resultado': resultado,
+            'avaliador': avaliador
+        }
+
+        aluno['historico_avaliacoes'].append(avaliacao)
+        self.avaliacoes.append({'aluno': aluno['nome'], **avaliacao})
+
+    def alerta_avaliacao_pendente(self, aluno):
+        historico_avaliacoes = aluno.get('historico_avaliacoes', [])
+        avaliacoes_pendentes = [avaliacao for avaliacao in historico_avaliacoes if avaliacao['resultado'] is None]
+
+        if avaliacoes_pendentes:
+            proxima_avaliacao = avaliacoes_pendentes[0]
+            data_proxima_avaliacao = proxima_avaliacao['data']
+            print(f"ALERTA: Próxima avaliação em {data_proxima_avaliacao}")
+        else:
+            print("Sem avaliações pendentes.")
+
+    def enviar_mensagem(self, remetente, destinatario, mensagem):
+        if 'mensagens' not in destinatario:
+            destinatario['mensagens'] = []
+
+        mensagem = {
+            'remetente': remetente,
+            'destinatario': destinatario,
+            'mensagem': mensagem,
+            'data_envio': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        destinatario['mensagens'].append(mensagem)
+        self.mensagens.append(mensagem)
+
+    def visualizar_mensagens(self, aluno):
+        if 'mensagens' in aluno:
+            print(f"=== Mensagens para {aluno['nome']} ===")
+            for mensagem in aluno['mensagens']:
+                print(f"{mensagem['remetente']} ({mensagem['data_envio']}): {mensagem['mensagem']}")
+                print("=-=" * 10)
+        else:
+            print(f"Não há mensagens para {aluno['nome']}.")
+
+    def gerar_relatorio(self, aluno):
+        metas = aluno.get('metas', {})
+        relatorio = f"Relatório de Progresso para {aluno['nome']}:\n"
+        for tipo_avaliacao, resultado in metas.items():
+            relatorio += f"- {tipo_avaliacao}: {resultado}\n"
+        return relatorio
+
+    def imprimir_relatorio(self, aluno):
+        relatorio_aluno = self.gerar_relatorio(aluno)
+        print("=-=" * 10)
+        print(relatorio_aluno)
+        print("=-=" * 10)
+
+    def imprimir_mensagens_enviadas(self, aluno):
+        self.visualizar_mensagens(aluno)
+
+    def imprimir_metas(self, aluno):
+        metas = aluno.get('metas', {})
+        print(f"Metas para {aluno['nome']}:")
+        for tipo_avaliacao, resultado in metas.items():
+            print(f"- {tipo_avaliacao}: {resultado}")
+
+
+sistema = SistemaTreino()
+sistema.carregar_dados_csv()
+
+while True:
+    print('''==== Menu ====
+[ 1 ] Cadastrar Aluno
+[ 2 ] Aluno Já Cadastrado
+[ 3 ] Sair''')
+    escolha = int(input("-> "))
+
+    if escolha == 1:
+        print("==== Cadastro de Aluno ====")
+        nome = input("Nome: ")
+
+        aluno_existente = next((aluno for aluno in sistema.alunos if aluno['nome'] == nome), None)
+        if aluno_existente:
+            print(f"Aluno com o nome '{nome}' já cadastrado.")
+            continue
+
+        idade = int(input("Idade: "))
+        peso = int(input("Peso: "))
+        altura = float(input("Altura: "))
+        condicao_medica = input("Condição Médica: ")
+        meta = input("Meta: ")
+        aluno = sistema.cadastrar_aluno(nome, idade, peso, altura, condicao_medica, meta)
+
+        if aluno:
+            print(f"Aluno cadastrado com sucesso! Nome: {aluno['nome']}")
+        else:
+            print("Limite máximo de alunos atingido.")
+
+    elif escolha == 2:
+        print("=-=" * 13)
+        nome_aluno = input("Nome do Aluno: ")
+        aluno_encontrado = None
+        for aluno in sistema.alunos:
+            if aluno['nome'] == nome_aluno:
+                aluno_encontrado = aluno
+                break
+        else:
+            print("Aluno não encontrado")
+            continue
+        while True:
+            sistema.alerta_avaliacao_pendente(aluno_encontrado)
+            print(f'''
+[ 1 ] Relatório de {nome_aluno}
+[ 2 ] Marcar Avaliação para {nome_aluno}
+[ 3 ] Avaliar {nome_aluno}
+[ 4 ] Enviar Mensagem para {nome_aluno}
+[ 5 ] Visualizar Mensagens de {nome_aluno}
+[ 6 ] Sair''')
+            escolha1 = int(input("-> "))
+
+            if escolha1 == 1:
+                sistema.imprimir_relatorio(aluno_encontrado)
+
+            elif escolha1 == 2:
+                sistema.marcar_avaliacao(aluno_encontrado)
+
+            elif escolha1 == 3:
+                data_avaliacao = datetime.now().strftime("%Y-%m-%d")
+                print(f"==== Avaliação Aluno {nome_aluno} ====")
+                avaliador = input("Nome do Avaliador: ")
+                tipo_avaliacao = input("Tipo de Avaliação: ")
+                resultado_avaliacao = input(f"Resultado {tipo_avaliacao}: ")
+                sistema.realizar_avaliacao(aluno_encontrado, tipo_avaliacao, data_avaliacao, resultado_avaliacao, avaliador)
+
+            elif escolha1 == 4:
+                remetente = input("Nome de Remetente: ")
+                mensagem = input("Mensagem: ")
+                sistema.enviar_mensagem(remetente, aluno_encontrado, mensagem)
+                print("Mensagem enviada com sucesso!")
+
+            elif escolha1 == 5:
+                sistema.visualizar_mensagens(aluno_encontrado)
+
+            elif escolha1 == 6:
+                print("Saindo...")
+                break
+
+            else:
+                print("Escolha invalida!")
+
+    elif escolha == 3:
+        sistema.salvar_dados_csv()
+        print("Saindo do programa. Dados salvos.")
+        break
+
+    else:
+        print("Escolha invalida!")

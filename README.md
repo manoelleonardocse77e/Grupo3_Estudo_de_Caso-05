@@ -1,1 +1,6 @@
-# Grupo3_Estudo_de_Caso_04
+Arquivos:
+
+perfil_treino.json
+rotina_treino.json
+relatorio_desempenho.png
+

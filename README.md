@@ -1,6 +1,6 @@
 Arquivos:
 
-perfil_treino.json
-rotina_treino.json
-relatorio_desempenho.png
+- perfil_treino.json
+- rotina_treino.json
+- relatorio_desempenho.png
 
